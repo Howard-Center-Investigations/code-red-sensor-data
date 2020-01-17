@@ -15,7 +15,7 @@ output:
 
 The Howard Center for Investigative Journalism Code Red Temperature and Humidity Sensors
 
-This R Markdown was created by [The Howard Center for Investigative Journalism](https://merrill.umd.edu/about-merrill/signature-programs/the-howard-center-for-investigative-journalism/) at the University of Maryland's Philip Merrill College of Journalism for the purpose of providing a guide which other organizations can use to build their own temperature sensors. These sensors were used in the Howard Center's recent project, [Code Red](https://cnsmaryland.org/interactives/summer-2019/code-red/index.html), to examine how heat unequally affects residents of Baltimore, with low-income and people of color most affected. 
+This R Markdown was created by [The Howard Center for Investigative Journalism](https://merrill.umd.edu/about-merrill/signature-programs/the-howard-center-for-investigative-journalism/) at the University ofMaryland's Philip Merrill College of Journalism for the purpose of providing a guide which other organizations can use to build their own temperature sensors. These sensors were used in the Howard Center's recent project, [Code Red](https://cnsmaryland.org/interactives/summer-2019/code-red/index.html), to examine how heat unequally affects residents of Baltimore, with low-income and people of color most affected. 
 
 We built temperature and humidity sensors, using this ["Harlem Heat" project guide](https://github.com/datanews/harlem-heat) created by WNYC public radio for their [Harlem Heat Project](https://www.wnyc.org/series/harlem-heat-project). We placed them in several homes in Baltimore in summer 2019 and joined them with outdoor temperature to examine how heat index varied indoors and out.
 
@@ -42,14 +42,11 @@ library(weathermetrics)
 
 ## Load the Data
 
-The code below will first rename the columns in your data. If you want to change the column names, please also ensure you change the corresponding code. Next, the code will open your files and allow you to select the data you want to process. The data will be stored in the environment as "sensor_data" unless changed.
+The code below will open your files and allow you to select the sensor data you want to process. The data will be stored in the environment as "sensor_data" unless changed.
 
 ```{r}
-### Define column headers for sensor readings data ###
-sensor_col_names <- c("sensor_id", "unix_time", "datetime", "temperature", "relative_humidity", "battery_life")
-
 ### Load in data
-sensor_data <- read_csv(file.choose(), col_names = sensor_col_names)
+sensor_data <- read_csv(file.choose())
 ```
 
 ## Sensor Building
@@ -76,7 +73,7 @@ process_sensors <- function(person_location) {
       mutate(hour = hour(time)) %>%
       mutate(minute = minute(time)) %>%
       #mutate(temperature = temperature_f) %>%
-      select(date,time, month, day, hour, minute, temperature, humidity) %>%
+      select(date, time, month, day, hour, minute, temperature, humidity) %>%
       mutate(heat_index = heat.index(t=temperature, rh=humidity, temperature.metric = "fahrenheit")) 
     
     # calculate average temperature, humidity, heat index by month for the sensor, and store it as temporary object 
@@ -132,9 +129,9 @@ process_sensors <- function(person_location) {
     writeData(wb, sheet = 4, temp_humidity_heat_index_minute)
     
     # Create folder in output files 
-    folder <- paste0("output_files/", deparse(substitute(person_location)))
+    folder <- paste0(deparse(substitute(person_location)))
     dir.create(path = folder)
-    excel_filename <- paste0("output_files/", deparse(substitute(person_location)),"/",  deparse(substitute(person_location)), "_", date(now()), "temp_humidity_heat_index_means.xlsx")
+    excel_filename <- paste0(deparse(substitute(person_location)),"/",  deparse(substitute(person_location)), "_", date(now()), "temp_humidity_heat_index_means.xlsx")
     
     # Save worksheet to correct folder
     saveWorkbook(wb, excel_filename, overwrite = TRUE)
@@ -153,7 +150,7 @@ process_sensors <- function(person_location) {
       ylab("Mean Temperature")
     plot(temp_month_graph)
     filename <- paste0(deparse(substitute(person_location)),"_", date(now()), "_temp_means_month.pdf")
-    filepath <- paste0("output_files/", deparse(substitute(person_location)),"/")
+    filepath <- paste0(deparse(substitute(person_location)),"/")
     ggsave(filename, plot = temp_month_graph, device = "pdf", path = filepath, scale = 1, width = 11, height = 8, units = "in", dpi = 300)
     
     # Build daily graph temperature
@@ -171,7 +168,7 @@ process_sensors <- function(person_location) {
       scale_x_datetime(date_labels = "%b %d %H", date_breaks = "1 day")
     plot(temp_day_graph)    
     filename <- paste0(deparse(substitute(person_location)),"_", date(now()), "_temp_means_day.pdf")
-    filepath <- paste0("output_files/", deparse(substitute(person_location)),"/")
+    filepath <- paste0(deparse(substitute(person_location)),"/")
     ggsave(filename, plot = temp_day_graph, device = "pdf", path = filepath, scale = 1, width = 11, height = 8, units = "in", dpi = 300)
     
     # Build hourly graph temperature
@@ -185,7 +182,7 @@ process_sensors <- function(person_location) {
       theme(axis.text.x = element_text(angle=50,hjust=1))
     plot(temp_hour_graph)
     filename <- paste0(deparse(substitute(person_location)),"_", date(now()), "_temp_means_hour.pdf")
-    filepath <- paste0("output_files/", deparse(substitute(person_location)),"/")
+    filepath <- paste0(deparse(substitute(person_location)),"/")
     ggsave(filename, plot = temp_hour_graph, device = "pdf", path = filepath, scale = 1, width = 11, height = 8, units = "in", dpi = 300)
    
     # Build minute graph temperature
@@ -199,7 +196,7 @@ process_sensors <- function(person_location) {
       theme(axis.text.x = element_text(angle=50,hjust=1))
     plot(temp_minute_graph)
     filename <- paste0(deparse(substitute(person_location)),"_", date(now()), "_temp_means_minute.pdf")
-    filepath <- paste0("output_files/", deparse(substitute(person_location)),"/")
+    filepath <- paste0(deparse(substitute(person_location)),"/")
     ggsave(filename, plot = temp_minute_graph, device = "pdf", path = filepath, scale = 1, width = 11, height = 8, units = "in", dpi = 300)
     
     
@@ -224,23 +221,23 @@ For those who want to manipulate the data, the following section of code creates
 process_sensor_data <- function(person_location) {
   # parse date objects and remove unneeded columns
   temp <- person_location %>%  
-    mutate(date = date(datetime)) %>%
-    mutate(year = year(datetime)) %>%
-    mutate(month = month(datetime)) %>%
-    mutate(day = day(datetime)) %>%
-    mutate(hour = hour(datetime)) %>%
-    mutate(minute = minute(datetime)) %>%
-    select(datetime, date, year, month, day, hour, minute, temperature, relative_humidity) %>%
-    mutate(heat_index = heat.index(t=temperature, rh=relative_humidity, temperature.metric = "fahrenheit")) %>%
+    mutate(date = date(date)) %>%
+    mutate(year = year(date)) %>%
+    mutate(month = month(date)) %>%
+    mutate(day = day(date)) %>%
+    mutate(hour = hour(time)) %>%
+    mutate(minute = minute(time)) %>%
+    select(datetime, date, year, month, day, hour, minute, temperature, humidity) %>%
+    mutate(heat_index = heat.index(t=temperature, rh=humidity, temperature.metric = "fahrenheit")) %>%
     select(-contains(".y"), -contains("dew")) %>%
-    rename(date = `date.x`) %>%
+    rename(date = `date.x`)
   
   # calculate average temperature by day for the sensor, and store it as temporary object 
   temp_humidity_heat_index_day <- temp %>%
     group_by(date) %>%
     summarise(mean_indoor_temperature = round(mean(temperature),1),
               mean_indoor_heat_index = round(mean(heat_index),1),
-              mean_indoor_relative_humidity = round(mean(relative_humidity),1))
+              mean_indoor_relative_humidity = round(mean(humidity),1)) %>%
     table_name <- paste0(deparse(substitute(person_location)), "_day_averages")
     assign(table_name, temp_humidity_heat_index_day, envir = parent.frame())
     
@@ -250,7 +247,7 @@ process_sensor_data <- function(person_location) {
       group_by(date_hour) %>%
       summarise(mean_indoor_temperature = round(mean(temperature),1),
                 mean_indoor_heat_index = round(mean(heat_index),1),
-                mean_indoor_relative_humidity = round(mean(relative_humidity),1))
+                mean_indoor_relative_humidity = round(mean(humidity),1)) %>%
       table_name <- paste0(deparse(substitute(person_location)), "_day_hourly_averages")
       assign(table_name, temp_humidity_heat_index_day_hour, envir = parent.frame())
     
@@ -261,7 +258,7 @@ process_sensor_data <- function(person_location) {
     group_by(date_hour_minute) %>%
     summarise(mean_indoor_temperature = round(mean(temperature),1),
                 mean_indoor_heat_index = round(mean(heat_index),1),
-                mean_indoor_relative_humidity = round(mean(relative_humidity),1))
+                mean_indoor_relative_humidity = round(mean(relative_humidity),1)) %>%
       table_name <- paste0(deparse(substitute(person_location)), "_day_minute_averages")
       assign(table_name, temp_humidity_heat_index_day_minute, envir = parent.frame())
     
@@ -278,7 +275,7 @@ process_sensor_data <- function(person_location) {
       ylab("Mean Temperature")
     plot(temp_month_graph)
     filename <- paste0(deparse(substitute(person_location)),"_", date(now()), "_temp_means_month.pdf")
-    filepath <- paste0("output_files/", deparse(substitute(person_location)),"/")
+    filepath <- paste0(deparse(substitute(person_location)),"/")
     ggsave(filename, plot = temp_month_graph, device = "pdf", path = filepath, scale = 1, width = 11, height = 8, units = "in", dpi = 300)
     
     # Build daily graph temperature
@@ -296,7 +293,7 @@ process_sensor_data <- function(person_location) {
       scale_x_datetime(date_labels = "%b %d %H", date_breaks = "1 day")
     plot(temp_day_graph)    
     filename <- paste0(deparse(substitute(person_location)),"_", date(now()), "_temp_means_day.pdf")
-    filepath <- paste0("output_files/", deparse(substitute(person_location)),"/")
+    filepath <- paste0(deparse(substitute(person_location)),"/")
     ggsave(filename, plot = temp_day_graph, device = "pdf", path = filepath, scale = 1, width = 11, height = 8, units = "in", dpi = 300)
     
     # Build hourly graph temperature
@@ -310,7 +307,7 @@ process_sensor_data <- function(person_location) {
       theme(axis.text.x = element_text(angle=50,hjust=1))
     plot(temp_hour_graph)
     filename <- paste0(deparse(substitute(person_location)),"_", date(now()), "_temp_means_hour.pdf")
-    filepath <- paste0("output_files/", deparse(substitute(person_location)),"/")
+    filepath <- paste0(deparse(substitute(person_location)),"/")
     ggsave(filename, plot = temp_hour_graph, device = "pdf", path = filepath, scale = 1, width = 11, height = 8, units = "in", dpi = 300)
    
     # Build minute graph temperature
@@ -324,7 +321,7 @@ process_sensor_data <- function(person_location) {
       theme(axis.text.x = element_text(angle=50,hjust=1))
     plot(temp_minute_graph)
     filename <- paste0(deparse(substitute(person_location)),"_", date(now()), "_temp_means_minute.pdf")
-    filepath <- paste0("output_files/", deparse(substitute(person_location)),"/")
+    filepath <- paste0(deparse(substitute(person_location)),"/")
     ggsave(filename, plot = temp_minute_graph, device = "pdf", path = filepath, scale = 1, width = 11, height = 8, units = "in", dpi = 300)
     
 }  
