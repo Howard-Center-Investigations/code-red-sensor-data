@@ -68,12 +68,13 @@ process_sensors <- function(person_location) {
     temp <<- temp %>%  
       # select(-x8,-x9,-x10,-x11) %>%
       mutate(date = mdy(date)) %>%
+      mutate(year = year(date)) %>%
       mutate(month = month(date)) %>%
       mutate(day = day(date)) %>%
       mutate(hour = hour(time)) %>%
       mutate(minute = minute(time)) %>%
       #mutate(temperature = temperature_f) %>%
-      select(date, time, month, day, hour, minute, temperature, humidity) %>%
+      select(date, year, month, day, hour, minute, temperature, humidity) %>%
       mutate(heat_index = heat.index(t=temperature, rh=humidity, temperature.metric = "fahrenheit")) 
     
     # calculate average temperature, humidity, heat index by month for the sensor, and store it as temporary object 
@@ -86,7 +87,7 @@ process_sensors <- function(person_location) {
     
     # calculate average temperature by day for the sensor, and store it as temporary object 
     temp_humidity_heat_index_day <<- temp %>%
-      mutate(day = make_datetime(year = 2020, month = month, day = day)) %>%
+      mutate(day = make_datetime(year = year, month = month, day = day)) %>%
       group_by(day) %>%
       summarise(mean_temp = round(mean(temperature),1),
                 mean_humidity = round(mean(humidity),1),
@@ -96,7 +97,7 @@ process_sensors <- function(person_location) {
     
     # calculate average temperature by hour for the sensor, and store it as temporary object 
     temp_humidity_heat_index_hour <<- temp %>%
-      mutate(hour = make_datetime(year = 2020, month = month, day = day, hour = hour)) %>%
+      mutate(hour = make_datetime(year = year, month = month, day = day, hour = hour)) %>%
       group_by(hour) %>%
       summarise(mean_temp = round(mean(temperature),1),
                 mean_humidity = round(mean(humidity),1),
@@ -104,9 +105,9 @@ process_sensors <- function(person_location) {
       ) %>%
       select(hour, mean_temp, mean_humidity, mean_heat_index)
     
-    # calculate average temperature by hour for the sensor, and store it as temporary object
+    # calculate average temperature by minute for the sensor, and store it as temporary object
     temp_humidity_heat_index_minute <<- temp %>%
-      mutate(minute = make_datetime(year = 2020, month = month, day = day, hour = hour, min = minute)) %>%
+      mutate(minute = make_datetime(year = year, month = month, day = day, hour = hour, min = minute)) %>%
       group_by(minute) %>%
       summarise(mean_temp = round(mean(temperature),1),
                 mean_humidity = round(mean(humidity),1),
@@ -130,7 +131,6 @@ process_sensors <- function(person_location) {
     
     # Create folder in output files 
     folder <- paste0(deparse(substitute(person_location)))
-    dir.create(path = folder)
     excel_filename <- paste0(deparse(substitute(person_location)),"/",  deparse(substitute(person_location)), "_", date(now()), "temp_humidity_heat_index_means.xlsx")
     
     # Save worksheet to correct folder
@@ -219,48 +219,62 @@ For those who want to manipulate the data, the following section of code creates
 ##### Sensor Processing Function ######
 #######################################
 process_sensor_data <- function(person_location) {
+  
+  # clean column names
+  temp <<- clean_names(person_location) 
+  
   # parse date objects and remove unneeded columns
-  temp <- person_location %>%  
-    mutate(date = date(date)) %>%
+  temp <<- temp %>%  
+    mutate(date = mdy(date)) %>%
     mutate(year = year(date)) %>%
     mutate(month = month(date)) %>%
     mutate(day = day(date)) %>%
     mutate(hour = hour(time)) %>%
     mutate(minute = minute(time)) %>%
-    select(datetime, date, year, month, day, hour, minute, temperature, humidity) %>%
-    mutate(heat_index = heat.index(t=temperature, rh=humidity, temperature.metric = "fahrenheit")) %>%
-    select(-contains(".y"), -contains("dew")) %>%
-    rename(date = `date.x`)
+    select(date, year, month, day, hour, minute, temperature, humidity) %>%
+    mutate(heat_index = heat.index(t=temperature, rh=humidity, temperature.metric = "fahrenheit"))
+  
+  # calculate average temperature, humidity, heat index by month for the sensor, and store it as temporary object 
+    temp_humidity_heat_index_month <<- temp %>%
+      group_by(month) %>%
+      summarise(mean_temp = round(mean(temperature),1),
+                mean_heat_index = round(mean(heat_index),1),
+                mean_humidity = round(mean(humidity),1))
+    table_name <- paste0(deparse(substitute(person_location)), "_month_averages")
+    assign(table_name, temp_humidity_heat_index_month, envir = parent.frame())
   
   # calculate average temperature by day for the sensor, and store it as temporary object 
   temp_humidity_heat_index_day <- temp %>%
-    group_by(date) %>%
-    summarise(mean_indoor_temperature = round(mean(temperature),1),
-              mean_indoor_heat_index = round(mean(heat_index),1),
-              mean_indoor_relative_humidity = round(mean(humidity),1)) %>%
+    mutate(day = make_datetime(year = year, month = month, day = day)) %>%
+    group_by(day) %>%
+    summarise(mean_temp = round(mean(temperature),1),
+              mean_heat_index = round(mean(heat_index),1),
+              mean_humidity = round(mean(humidity),1)) %>%
+    select(day, mean_temp, mean_humidity, mean_heat_index)
     table_name <- paste0(deparse(substitute(person_location)), "_day_averages")
     assign(table_name, temp_humidity_heat_index_day, envir = parent.frame())
     
-    # calculate average temperature by day and hour for the sensor, and store it as temporary object 
-    temp_humidity_heat_index_day_hour <- temp %>%
-      mutate(date_hour = make_datetime(year = year, month = month, day = day, hour = hour)) %>%
-      group_by(date_hour) %>%
-      summarise(mean_indoor_temperature = round(mean(temperature),1),
-                mean_indoor_heat_index = round(mean(heat_index),1),
-                mean_indoor_relative_humidity = round(mean(humidity),1)) %>%
-      table_name <- paste0(deparse(substitute(person_location)), "_day_hourly_averages")
-      assign(table_name, temp_humidity_heat_index_day_hour, envir = parent.frame())
+    # calculate average temperature by hour for the sensor, and store it as temporary object 
+    temp_humidity_heat_index_hour <- temp %>%
+      mutate(hour = make_datetime(year = year, month = month, day = day, hour = hour)) %>%
+      group_by(hour) %>%
+      summarise(mean_temp = round(mean(temperature),1),
+                mean_heat_index = round(mean(heat_index),1),
+                mean_humidity = round(mean(humidity),1)) %>%
+      select(hour, mean_temp, mean_humidity, mean_heat_index)
+      table_name <- paste0(deparse(substitute(person_location)), "_hourly_averages")
+      assign(table_name, temp_humidity_heat_index_hour, envir = parent.frame())
     
     # Calculate average temperature by minute for the sensor, and store it as temporary object
       # Note: because temperature collection is done at intervals that are sometimes greater than a minute, won't have          exactly one value per minute.
-    temp_humidity_heat_index_day_minute <- temp %>%
-    mutate(date_hour_minute = make_datetime(year = year, month = month, day = day, hour = hour, min = minute)) %>%
-    group_by(date_hour_minute) %>%
-    summarise(mean_indoor_temperature = round(mean(temperature),1),
-                mean_indoor_heat_index = round(mean(heat_index),1),
-                mean_indoor_relative_humidity = round(mean(relative_humidity),1)) %>%
-      table_name <- paste0(deparse(substitute(person_location)), "_day_minute_averages")
-      assign(table_name, temp_humidity_heat_index_day_minute, envir = parent.frame())
+    temp_humidity_heat_index_minute <- temp %>%
+    mutate(minute = make_datetime(year = year, month = month, day = day, hour = hour, min = minute)) %>%
+      group_by(minute) %>%
+    summarise(mean_temp = round(mean(temperature),1),
+                mean_heat_index = round(mean(heat_index),1),
+                mean_humidity = round(mean(humidity),1))
+      table_name <- paste0(deparse(substitute(person_location)), "_minute_averages")
+      assign(table_name, temp_humidity_heat_index_minute, envir = parent.frame())
     
     ######################
     #### Build graphs ####
@@ -367,7 +381,7 @@ outside_data <- outside_data  %>%
   distinct()
 
 ##Process the sensor data and produce an Excel workbook with 4 sheets and graphs
-process_sensor_data <- function(person_location) {
+process_sensor_and_outside_data <- function(person_location) {
   # parse date objects and remove unneeded columns
   temp <- person_location %>%  
     mutate(date = date(datetime)) %>%
@@ -491,7 +505,7 @@ process_sensor_data <- function(person_location) {
     
 }  
 
-process_sensor_data(sensor_data)
+process_sensor_and_outside_data(sensor_data)
 ```
 
 Building R Packages
